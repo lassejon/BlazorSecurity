@@ -1,3 +1,4 @@
+using BlazorSecurity;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -35,9 +36,19 @@ builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.Requ
     .AddSignInManager()
     .AddDefaultTokenProviders();
 
+builder.Services.Configure<IdentityOptions>(options =>
+{
+    options.Password.RequireDigit = true;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireNonAlphanumeric = true;
+    options.Password.RequireUppercase = true;
+    options.Password.RequiredLength = 8;
+    options.Password.RequiredUniqueChars = 1;
+});
+
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("RequireAdministratorRole", policy => policy.RequireRole("Administrator"));
+    options.AddPolicy("RequireAdministratorRole", policy => policy.RequireRole(UserRoles.Admin));
 });
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();

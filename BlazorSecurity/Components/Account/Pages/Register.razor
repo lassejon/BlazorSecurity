@@ -14,6 +14,7 @@
 @inject ILogger<Register> Logger
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
+@inject IServiceProvider ServiceProvider
 
 <PageTitle>Register</PageTitle>
 
@@ -41,6 +42,13 @@
                 <InputText type="password" @bind-Value="Input.ConfirmPassword" class="form-control" autocomplete="new-password" aria-required="true" placeholder="password"/>
                 <label for="confirm-password">Confirm Password</label>
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger"/>
+            </div>
+            <div class="form-check mb-3">
+                <InputCheckbox @bind-Value="Input.IsAdmin" class="form-check-input"/>
+                <label class="form-check-label" for="isAdmin">
+                    Is Admin
+                </label>
+                <ValidationMessage For="() => Input.IsAdmin" class="text-danger"/>
             </div>
             <button type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </EditForm>
@@ -90,14 +98,19 @@
             new Dictionary<string, object?> { ["userId"] = userId, ["code"] = code, ["returnUrl"] = ReturnUrl });
 
         await EmailSender.SendConfirmationLinkAsync(user, Input.Email, HtmlEncoder.Default.Encode(callbackUrl));
-
+        
+        if (Input.IsAdmin)
+        {
+            await CreateUserRoleAsync(UserRoles.Admin, Input.Email);
+        }
+        
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
             RedirectManager.RedirectTo(
                 "Account/RegisterConfirmation",
                 new() { ["email"] = Input.Email, ["returnUrl"] = ReturnUrl });
         }
-
+        
         await SignInManager.SignInAsync(user, isPersistent: false);
         RedirectManager.RedirectTo(ReturnUrl);
     }
@@ -113,6 +126,27 @@
             throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
                                                 $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
         }
+    }
+    
+    private async Task CreateUserRoleAsync(string roleName, string email)
+    {
+        var roleManager = ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var roleExists = await roleManager.RoleExistsAsync(roleName);
+
+        if (!roleExists)
+        {
+            var role = new IdentityRole(roleName);
+            await roleManager.CreateAsync(role);
+        }
+
+        var identityUser = await UserManager.FindByEmailAsync(email);
+
+        if (identityUser is null)
+        {
+            return;
+        }
+        
+        await UserManager.AddToRoleAsync(identityUser, roleName);
     }
 
     private IUserEmailStore<ApplicationUser> GetEmailStore()
@@ -142,6 +176,10 @@
         [Display(Name = "Confirm password")]
         [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
         public string ConfirmPassword { get; set; } = "";
+        
+        [Required]
+        [Display(Name = "IsAdmin")]
+        public bool IsAdmin { get; set; }
     }
 
 }
