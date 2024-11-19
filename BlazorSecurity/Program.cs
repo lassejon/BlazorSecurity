@@ -1,3 +1,4 @@
+using System.Text.Json;
 using BlazorSecurity;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -24,8 +25,16 @@ builder.Services.AddAuthentication(options =>
     })
     .AddIdentityCookies();
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ??
-                       throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var profileName = GetActiveProfile();
+var connectionStringKey = "DefaultConnection";
+
+if (profileName == "https:test")
+{
+    connectionStringKey = "MockConnection";
+}
+
+var connectionString = builder.Configuration.GetConnectionString(connectionStringKey) ??
+                       throw new InvalidOperationException($"Connection string {connectionStringKey} not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -79,3 +88,33 @@ app.MapRazorComponents<App>()
 app.MapAdditionalIdentityEndpoints();
 
 app.Run();
+return;
+
+string GetActiveProfile()
+{
+    var launchSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), 
+        "Properties", 
+        "launchSettings.json");
+    
+    if (!File.Exists(launchSettingsPath))
+        return "unknown";
+
+    var launchSettings = JsonDocument.Parse(File.ReadAllText(launchSettingsPath));
+    var profiles = launchSettings.RootElement.GetProperty("profiles");
+    
+    var currentUrls = Environment.GetEnvironmentVariable("ASPNETCORE_URLS") ?? "";
+    
+    foreach (var profile in profiles.EnumerateObject())
+    {
+        var applicationUrl = profile.Value.TryGetProperty("applicationUrl", out var urlProperty) 
+            ? urlProperty.GetString() 
+            : "";
+            
+        if (applicationUrl != null && currentUrls.Contains(applicationUrl.Split(';')[0]))
+        {
+            return profile.Name;
+        }
+    }
+    
+    return "unknown";
+}
