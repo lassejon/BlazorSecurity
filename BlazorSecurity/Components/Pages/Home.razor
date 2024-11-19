@@ -1,5 +1,11 @@
 ﻿@page "/"
+
+@using BlazorSecurity.Data
+@using Microsoft.AspNetCore.Identity
+
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IServiceProvider ServiceProvider
+@inject UserManager<ApplicationUser> UserManager
 
 <PageTitle>Home</PageTitle>
 
@@ -19,6 +25,14 @@ Welcome to your new app.
 @if (_isAuthenticated)
 {
     <div class="nav-item px-3">You are sgu Authorized</div>
+    @if (_isAdmin)
+    {
+        <div class="nav-item px-3">ADMIN</div>
+    }
+    else
+    {
+        <div class="nav-item px-3">NOT AN ADMIN</div>
+    }
 }
 else
 {
@@ -28,6 +42,7 @@ else
 @code
 {
     private bool _isAuthenticated;
+    private bool _isAdmin;
 
     protected override async Task OnInitializedAsync()
     {
@@ -36,5 +51,29 @@ else
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        _isAdmin = authState.User.IsInRole("Administrator");
+
+        // await CreateUserRoleAsync("Administrator", "lasse1@live.dk");
+    }
+
+    private async Task CreateUserRoleAsync(string roleName, string? email)
+    {
+        var roleManager = ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+        var roleExists = await roleManager.RoleExistsAsync(roleName);
+
+        if (!roleExists)
+        {
+            var role = new IdentityRole(roleName);
+            await roleManager.CreateAsync(role);
+        }
+
+        var identityUser = await UserManager.FindByEmailAsync(email);
+
+        if (identityUser is null)
+        {
+            return;
+        }
+        
+        await UserManager.AddToRoleAsync(identityUser, roleName);
     }
 }
