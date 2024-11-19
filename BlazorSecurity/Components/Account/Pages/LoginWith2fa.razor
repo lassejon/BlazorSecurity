@@ -1,6 +1,7 @@
 ﻿@page "/Account/LoginWith2fa"
 
 @using System.ComponentModel.DataAnnotations
+@using System.Diagnostics
 @using Microsoft.AspNetCore.Identity
 @using BlazorSecurity.Data
 
@@ -60,13 +61,26 @@
         user = await SignInManager.GetTwoFactorAuthenticationUserAsync() ??
                throw new InvalidOperationException("Unable to load two-factor authentication user.");
 
-        var token = await UserManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+        // var token = await UserManager.GenerateTwoFactorTokenAsync(user, TokenOptions.DefaultEmailProvider);
+        //
+        // SendTokenByMail(token);
     }
 
+    // private static void SendTokenByMail(string token)
+    // {
+    //     Debug.WriteLine(token);
+    // }
+    
     private async Task OnValidSubmitAsync()
     {
         var authenticatorCode = Input.TwoFactorCode!.Replace(" ", string.Empty).Replace("-", string.Empty);
-        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(authenticatorCode, RememberMe, Input.RememberMachine);
+        var result = await SignInManager.TwoFactorAuthenticatorSignInAsync(
+            authenticatorCode,
+            RememberMe, 
+            Input.RememberMachine);
+
+        // var result = await SignInManager.TwoFactorSignInAsync(TokenOptions.DefaultEmailProvider, authenticatorCode, RememberMe, Input.RememberMachine);
+        
         var userId = await UserManager.GetUserIdAsync(user);
 
         if (result.Succeeded)

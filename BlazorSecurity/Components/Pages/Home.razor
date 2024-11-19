@@ -1,4 +1,5 @@
 ﻿@page "/"
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Home</PageTitle>
 
@@ -14,3 +15,26 @@ Welcome to your new app.
         <div class="nav-item px-3">NON-Authorized</div>
     </NotAuthorized>
 </AuthorizeView>
+
+@if (_isAuthenticated)
+{
+    <div class="nav-item px-3">You are sgu Authorized</div>
+}
+else
+{
+    <div class="nav-item px-3">You are sgu NON-Authorized</div>
+}
+
+@code
+{
+    private bool _isAuthenticated;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+    }
+}
