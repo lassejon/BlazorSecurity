@@ -71,6 +71,11 @@ Følg disse trin ved certifikatfejl:
 
 ## Kørsel af Projekt
 
+If you are getting this error when access localhost, simply go to
+
+chrome://flags/
+and enable Allow invalid certificates for resources loaded from localhost.
+
 > **BEMÆRK**: Første kørsel kan tage ekstra tid pga. installation af værktøjer og afhængigheder.
 
 1. Vælg WSL som målplatform i Visual Studio
