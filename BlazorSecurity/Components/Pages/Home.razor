@@ -1,0 +1,47 @@
+﻿@page "/"
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Home</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <div class="nav-item px-3">Authenticated</div>
+    </Authorized>
+    <NotAuthorized>
+        <div class="nav-item px-3">NON-Authenticated</div>
+    </NotAuthorized>
+</AuthorizeView>
+
+@if (IsAuthenticated)
+{
+    <div class="nav-item px-3">You are sgu Authenticated</div>
+}
+else
+{
+    <div class="nav-item px-3">You are sgu NON-Authenticated</div>
+}
+@if (IsAdmin)
+{
+    <div class="nav-item px-3">ADMIN</div>
+}
+else
+{
+    <div class="nav-item px-3">NOT AN ADMIN</div>
+}
+
+@code
+{
+    public bool IsAuthenticated;
+    public bool IsAdmin;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        IsAdmin = authState.User.IsInRole(UserRoles.Admin);
+    }
+}
