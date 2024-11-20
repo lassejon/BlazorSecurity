@@ -1,14 +1,10 @@
 using BlazorSecurity.Components.Pages;
-using System.Security.Claims;
 using Bunit;
 using Bunit.TestDoubles;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Components.Authorization;
-using Microsoft.Extensions.DependencyInjection;
 
-namespace BlazorSecurity.Tests;
+namespace BlazorSecurity.Tests.View;
 
-public class AuthenticationTest
+public class HomePageViewTests
 {
     [Fact]
     public void IsNotAuthenticatedTest()
@@ -20,16 +16,12 @@ public class AuthenticationTest
         // Act
         var cut = context.RenderComponent<Home>();
         
-        var cutInstance = cut.Instance;
-        
         // Assert
         cut.MarkupMatches(@"
             <div class=""nav-item px-3"">NON-Authenticated</div>
             <div class=""nav-item px-3"">You are sgu NON-Authenticated</div>
             <div class=""nav-item px-3"">NOT AN ADMIN</div>
         ");
-        
-        Assert.False(cutInstance.IsAuthenticated);
     }
     
     [Fact]
@@ -44,15 +36,31 @@ public class AuthenticationTest
         // Act
         var cut = context.RenderComponent<Home>();
         
-        var cutInstance = cut.Instance;
-        
         // Assert
         cut.MarkupMatches(@"
             <div class=""nav-item px-3"">Authenticated</div>
             <div class=""nav-item px-3"">You are sgu Authenticated</div>
             <div class=""nav-item px-3"">NOT AN ADMIN</div>
         ");
+    }
+    
+    [Fact]
+    public void IsAuthenticatedAndAdminTest()
+    {
+        // Arrange
+        var context = new TestContext();
+        var authContext = context.AddTestAuthorization();
+        authContext.SetAuthorized("test@test.com", AuthorizationState.Authorized);
+        authContext.SetRoles("Administrator");
         
-        Assert.True(cutInstance.IsAuthenticated);
+        // Act
+        var cut = context.RenderComponent<Home>();
+        
+        // Assert
+        cut.MarkupMatches(@"
+            <div class=""nav-item px-3"">Authenticated</div>
+            <div class=""nav-item px-3"">You are sgu Authenticated</div>
+            <div class=""nav-item px-3"">ADMIN</div>
+        ");
     }
 }
