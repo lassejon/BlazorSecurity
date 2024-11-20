@@ -31,7 +31,7 @@
 2. Naviger til den ønskede mappe
 3. Klon repository'et:
    ```bash
-   git clone [repository URL]
+   git clone https://github.com/lassejon/BlazorSecurity/blob/main/BlazorSecurity
    ```
 
 ### 4. Åbning og Konfiguration i Visual Studio
