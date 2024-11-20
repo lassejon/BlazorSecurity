@@ -1,34 +1,27 @@
 ﻿@page "/"
 
-@using BlazorSecurity.Data
-@using Microsoft.AspNetCore.Identity
-
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageTitle>Home</PageTitle>
 
-<h1>Hello, world!</h1>
-
-Welcome to your new app.
-
 <AuthorizeView>
     <Authorized>
-        <div class="nav-item px-3">Authorized</div>
+        <div class="nav-item px-3">Authenticated</div>
     </Authorized>
     <NotAuthorized>
-        <div class="nav-item px-3">NON-Authorized</div>
+        <div class="nav-item px-3">NON-Authenticated</div>
     </NotAuthorized>
 </AuthorizeView>
 
-@if (_isAuthenticated)
+@if (IsAuthenticated)
 {
-    <div class="nav-item px-3">You are sgu Authorized</div>
+    <div class="nav-item px-3">You are sgu Authenticated</div>
 }
 else
 {
-    <div class="nav-item px-3">You are sgu NON-Authorized</div>
+    <div class="nav-item px-3">You are sgu NON-Authenticated</div>
 }
-@if (_isAdmin)
+@if (IsAdmin)
 {
     <div class="nav-item px-3">ADMIN</div>
 }
@@ -39,8 +32,8 @@ else
 
 @code
 {
-    private bool _isAuthenticated;
-    private bool _isAdmin;
+    public bool IsAuthenticated;
+    public bool IsAdmin;
 
     protected override async Task OnInitializedAsync()
     {
@@ -48,7 +41,7 @@ else
 
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
-        _isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
-        _isAdmin = authState.User.IsInRole(UserRoles.Admin);
+        IsAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        IsAdmin = authState.User.IsInRole(UserRoles.Admin);
     }
 }
