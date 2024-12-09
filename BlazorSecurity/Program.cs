@@ -27,6 +27,8 @@ builder.Services.AddAuthentication(options =>
 
 var profileName = GetActiveProfile();
 var connectionStringKey = "DefaultConnection";
+var cprConnectionString = builder.Configuration.GetConnectionString("CprConnection") ??
+                            throw new InvalidOperationException($"CPR Connection string not found.");
 
 if (profileName == "https:test")
 {
@@ -37,6 +39,10 @@ var connectionString = builder.Configuration.GetConnectionString(connectionStrin
                        throw new InvalidOperationException($"Connection string {connectionStringKey} not found.");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
+
+builder.Services.AddDbContext<CprDbContext>(options =>
+    options.UseSqlite(cprConnectionString));
+
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddIdentityCore<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
@@ -57,10 +63,19 @@ builder.Services.Configure<IdentityOptions>(options =>
 
 builder.Services.AddAuthorization(options =>
 {
+    options.AddPolicy("RequireAuthenticatedUser", policy => policy.RequireAuthenticatedUser());
+    
     options.AddPolicy("RequireAdministratorRole", policy => policy.RequireRole(UserRoles.Admin));
 });
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+
+var devCertsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".aspnet/dev-certs/https");
+var devCert = Path.GetFullPath("BlazorSecurity.pfx", devCertsFolder);
+builder.Configuration.GetSection("Kestrel:Endpoints:Https:Certificate:Path").Value = devCert;
+
+var kestrelPassword = builder.Configuration.GetValue<string>("KestrelCertificatePassword");
+builder.Configuration.GetSection("Kestrel:Endpoints:Https:Certificate:Password").Value = kestrelPassword;
 
 var app = builder.Build();
 

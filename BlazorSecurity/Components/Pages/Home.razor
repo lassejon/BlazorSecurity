@@ -1,7 +1,9 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
 
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
+@attribute [Authorize("RequireAuthenticatedUser")]
 <PageTitle>Home</PageTitle>
 
 <AuthorizeView>

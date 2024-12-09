@@ -12,6 +12,7 @@
 @inject SignInManager<ApplicationUser> SignInManager
 @inject IEmailSender<ApplicationUser> EmailSender
 @inject ILogger<Register> Logger
+@inject CprDbContext CprDbContext;
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject IServiceProvider ServiceProvider
@@ -43,9 +44,19 @@
                 <label for="confirm-password">Confirm Password</label>
                 <ValidationMessage For="() => Input.ConfirmPassword" class="text-danger"/>
             </div>
+            <div class="form-floating mb-3">
+                <InputText type="text" @bind-Value="Input.CprNumber" class="form-control" autocomplete="DDMMYYYYXXXX" aria-required="true" placeholder="DDMMYYYYXXXX"/>
+                <label for="cpr-number">CPR number</label>
+                <ValidationMessage For="() => Input.CprNumber" class="text-danger"/>
+            </div>
+            <div class="form-floating mb-3">
+                <InputText type="text" @bind-Value="Input.ConfirmCprNumber" class="form-control" autocomplete="DDMMYYYYXXXX" aria-required="true" placeholder="DDMMYYYYXXXX"/>
+                <label for="confirm-cpr-number">Confirm CPR number</label>
+                <ValidationMessage For="() => Input.ConfirmCprNumber" class="text-danger"/>
+            </div>
             <div class="form-check mb-3">
                 <InputCheckbox @bind-Value="Input.IsAdmin" class="form-check-input"/>
-                <label class="form-check-label" for="isAdmin">
+                <label class="form-check-label" for="is-admin">
                     Is Admin
                 </label>
                 <ValidationMessage For="() => Input.IsAdmin" class="text-danger"/>
@@ -103,6 +114,8 @@
         {
             await CreateUserRoleAsync(UserRoles.Admin, Input.Email);
         }
+
+        await SaveCprUser(userId, Input.CprNumber);
         
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
@@ -126,6 +139,19 @@
             throw new InvalidOperationException($"Can't create an instance of '{nameof(ApplicationUser)}'. " +
                                                 $"Ensure that '{nameof(ApplicationUser)}' is not an abstract class and has a parameterless constructor.");
         }
+    }
+
+    private async Task SaveCprUser(string userId, string cprNumber)
+    {
+        var user = new CprUser
+        {
+            UserId = userId,
+            CprNumber = cprNumber
+        };
+
+        // Add the new CPR user to the database
+        CprDbContext.CprUsers.Add(user);
+        await CprDbContext.SaveChangesAsync();
     }
     
     private async Task CreateUserRoleAsync(string roleName, string email)
@@ -178,8 +204,16 @@
         public string ConfirmPassword { get; set; } = "";
         
         [Required]
+        [Display(Name = "CPR number")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "The CPR number must be exactly 10 digits.")]
+        public string CprNumber { get; set; } = "";
+        
+        [Display(Name = "Confirm CPR number")]
+        [Compare("CprNumber", ErrorMessage = "The CPR number and confirmation CPR number do not match.")]
+        public string ConfirmCprNumber { get; set; } = "";
+        
+        [Required]
         [Display(Name = "IsAdmin")]
         public bool IsAdmin { get; set; }
     }
-
 }

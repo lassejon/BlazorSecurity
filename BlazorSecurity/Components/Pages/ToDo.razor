@@ -1,0 +1,78 @@
+@page "/todo"
+@using BlazorSecurity.Data
+@using Microsoft.EntityFrameworkCore
+
+@inject CprDbContext DbContext
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>Todo List</h3>
+
+<div class="mb-3">
+    <input type="text" @bind="NewToDoItem" class="form-control" placeholder="Enter a new todo item" />
+    <button class="btn btn-primary mt-2" @onclick="AddToDo">Add</button>
+</div>
+
+@if (ToDoList != null && ToDoList.Any())
+{
+    <ul class="list-group">
+        @foreach (var item in ToDoList)
+        {
+            <li class="list-group-item">@item.ToDoItem</li>
+        }
+    </ul>
+}
+else
+{
+    <p>No to-do items yet!</p>
+}
+
+@code {
+    private string NewToDoItem = string.Empty;
+    private List<BlazorSecurity.Data.ToDo> ToDoList = new();
+
+    private async Task AddToDo()
+    {
+        // Get the current user
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (string.IsNullOrWhiteSpace(NewToDoItem) || string.IsNullOrWhiteSpace(userId))
+        {
+            return; // Validation: Ensure userId and ToDoItem are not empty
+        }
+
+        var newToDo = new BlazorSecurity.Data.ToDo
+        {
+            UserId = userId,
+            ToDoItem = NewToDoItem
+        };
+
+        DbContext.ToDos.Add(newToDo);
+        await DbContext.SaveChangesAsync();
+
+        // Clear input and reload the list
+        NewToDoItem = string.Empty;
+        await LoadToDoList();
+    }
+
+    private async Task LoadToDoList()
+    {
+        // Get the current user
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        var userId = user.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        if (!string.IsNullOrWhiteSpace(userId))
+        {
+            ToDoList = await DbContext.ToDos
+                .Where(t => t.UserId == userId)
+                .ToListAsync();
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadToDoList();
+    }
+}

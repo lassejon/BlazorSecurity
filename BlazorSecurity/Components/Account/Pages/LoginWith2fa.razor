@@ -52,6 +52,7 @@
     [SupplyParameterFromForm] private InputModel Input { get; set; } = new();
 
     [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+    [SupplyParameterFromQuery] private string? ValidationUrl { get; set; }
 
     [SupplyParameterFromQuery] private bool RememberMe { get; set; }
 
@@ -86,7 +87,8 @@
         if (result.Succeeded)
         {
             Logger.LogInformation("User with ID '{UserId}' logged in with 2fa.", userId);
-            RedirectManager.RedirectTo(ReturnUrl);
+            RedirectManager.RedirectTo(ValidationUrl,
+                new() { ["returnUrl"] = ReturnUrl });
         }
         else if (result.IsLockedOut)
         {

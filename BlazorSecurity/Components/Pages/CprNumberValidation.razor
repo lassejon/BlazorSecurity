@@ -1,0 +1,99 @@
+@page "/CprNumberValidation"
+
+@using System.ComponentModel.DataAnnotations
+@using System.Diagnostics
+@using System.Security.Claims
+@using BlazorSecurity.Data
+@using Microsoft.AspNetCore.Authorization
+
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject CprDbContext CprDbContext
+@inject NavigationManager NavigationManager
+
+@attribute [Authorize]
+
+<h3>Cpr Number Validation</h3>
+
+<div class="row">
+    <div class="col-md-4">
+        <EditForm Model="Input" OnValidSubmit="ValidateCprNumber" FormName="cprValidationForm">
+            <input type="hidden" name="ReturnUrl" value="@ReturnUrl"/>
+            <DataAnnotationsValidator/>
+            <ValidationSummary/>
+
+            <div class="form-floating mb-3">
+                <InputText id="cpr-number"
+                           @bind-Value="Input.CprNumber"
+                           class="form-control"
+                           autocomplete="off"
+                           aria-required="true"
+                           placeholder="DDMMYYYYXXXX" />
+                <label for="cpr-number">CPR number</label>
+                <ValidationMessage For="@(() => Input.CprNumber)" class="text-danger" />
+            </div>
+            <button type="submit" class="w-100 btn btn-lg btn-primary">Validate</button>
+        </EditForm>
+    </div>
+</div>
+
+<p class="text-danger">@ErrorMessage</p>
+
+@code {
+    [SupplyParameterFromForm] private CprValidationModel Input { get; set; } = new();
+
+    [SupplyParameterFromQuery] private string? ReturnUrl { get; set; }
+    private string? ErrorMessage;
+    private string? UserId;
+
+    public class CprValidationModel
+    {
+        [Required]
+        [Display(Name = "CPR number")]
+        [RegularExpression(@"^\d{10}$", ErrorMessage = "The CPR number must be exactly 10 digits.")]
+        public string CprNumber { get; set; } = string.Empty;
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await base.OnInitializedAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+        UserId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        
+        ReturnUrl ??= NavigationManager.ToAbsoluteUri("/todo").ToString();
+    }
+
+    private async Task ValidateCprNumber()
+    {
+        try
+        {
+            // Retrieve the CPR number from the database
+            var storedCprUser = await CprDbContext.CprUsers.FindAsync(UserId);
+            if (storedCprUser == null)
+            {
+                ErrorMessage = "No CPR number found for the logged-in user.";
+                return;
+            }
+
+            Debug.WriteLine($"Stored CPR number: {storedCprUser.CprNumber}");
+            Debug.WriteLine($"Entered CPR number: {Input.CprNumber}");
+
+            // Validate the input CPR number
+            if (storedCprUser.CprNumber == Input.CprNumber)
+            {
+                // Redirect to homepage if validation succeeds
+                NavigationManager.NavigateTo(ReturnUrl);
+            }
+            else
+            {
+                ErrorMessage = "The CPR number does not match.";
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"An error occurred while validating the CPR number: {ex.Message}";
+        }
+    }
+
+}
