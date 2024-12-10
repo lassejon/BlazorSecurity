@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.Identity
 @using Microsoft.AspNetCore.WebUtilities
 @using BlazorSecurity.Data
+@using BlazorSecurity.Hashing
 
 @inject UserManager<ApplicationUser> UserManager
 @inject IUserStore<ApplicationUser> UserStore
@@ -16,6 +17,7 @@
 @inject NavigationManager NavigationManager
 @inject IdentityRedirectManager RedirectManager
 @inject IServiceProvider ServiceProvider
+@inject Hasher Hasher
 
 <PageTitle>Register</PageTitle>
 
@@ -115,7 +117,9 @@
             await CreateUserRoleAsync(UserRoles.Admin, Input.Email);
         }
 
-        await SaveCprUser(userId, Input.CprNumber);
+        var hashedCprNumber = Hasher.ComputeBCrypt(Input.CprNumber);
+
+        await SaveCprUser(userId, hashedCprNumber);
         
         if (UserManager.Options.SignIn.RequireConfirmedAccount)
         {
@@ -141,12 +145,13 @@
         }
     }
 
-    private async Task SaveCprUser(string userId, string cprNumber)
+    private async Task SaveCprUser(string userId, string cprNumberHash, byte[]? salt = null)
     {
         var user = new CprUser
         {
             UserId = userId,
-            CprNumber = cprNumber
+            CprNumberHash = cprNumberHash,
+            PasswordSalt = salt
         };
 
         // Add the new CPR user to the database

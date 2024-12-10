@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security.Authentication;
 using System.Text.Json;
 using BlazorSecurity;
 using Microsoft.AspNetCore.Components.Authorization;
@@ -6,6 +9,8 @@ using Microsoft.EntityFrameworkCore;
 using BlazorSecurity.Components;
 using BlazorSecurity.Components.Account;
 using BlazorSecurity.Data;
+using BlazorSecurity.Hashing;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -69,13 +74,26 @@ builder.Services.AddAuthorization(options =>
 });
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
+builder.Services.AddSingleton<Hasher>();
 
-var devCertsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".aspnet/dev-certs/https");
-var devCert = Path.GetFullPath("BlazorSecurity.pfx", devCertsFolder);
-builder.Configuration.GetSection("Kestrel:Endpoints:Https:Certificate:Path").Value = devCert;
+if (!IsLinux())
+{
+    var devCertFolderPath = IsOsx() ? ".aspnet/dev-certs/https" : ".aspnet/https";
 
-var kestrelPassword = builder.Configuration.GetValue<string>("KestrelCertificatePassword");
-builder.Configuration.GetSection("Kestrel:Endpoints:Https:Certificate:Password").Value = kestrelPassword;
+    var devCertsFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), devCertFolderPath);
+    var devCert = Path.GetFullPath("BlazorSecurity.pfx", devCertsFolder);
+    builder.Configuration.GetSection("Kestrel:Endpoints:Https:Certificate:Path").Value = devCert;
+    
+    var kestrelPassword = builder.Configuration.GetValue<string>("KestrelCertificatePassword");
+
+    builder.Configuration.GetSection("Kestrel:Endpoints:Https:Certificate:Password").Value = kestrelPassword;
+
+    builder.WebHost.UseKestrel((context, serverOptions) =>
+    {
+        serverOptions.Configure(context.Configuration.GetSection("Kestrel"))
+            .Endpoint("HTTPS", listenOptions => { listenOptions.HttpsOptions.SslProtocols = SslProtocols.Tls12; });
+    });
+}
 
 var app = builder.Build();
 
@@ -105,6 +123,16 @@ app.MapAdditionalIdentityEndpoints();
 app.Run();
 return;
 
+bool IsOsx()
+{
+    return RuntimeInformation.IsOSPlatform(OSPlatform.OSX);
+}
+
+bool IsLinux()
+{
+    return RuntimeInformation.IsOSPlatform(OSPlatform.Linux);
+}
+
 string GetActiveProfile()
 {
     var launchSettingsPath = Path.Combine(Directory.GetCurrentDirectory(), 
@@ -133,3 +161,4 @@ string GetActiveProfile()
     
     return "unknown";
 }
+
