@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security.Authentication;
 using System.Text.Json;
@@ -9,8 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using BlazorSecurity.Components;
 using BlazorSecurity.Components.Account;
 using BlazorSecurity.Data;
-using BlazorSecurity.Hashing;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
+using BlazorSecurity.Encryption;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,10 +16,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+KeyManager.InitializeKeys();
+
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<IdentityUserAccessor>();
 builder.Services.AddScoped<IdentityRedirectManager>();
 builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuthenticationStateProvider>();
+
+builder.Services.AddDataProtection();
 
 builder.Services.AddAuthentication(options =>
     {
@@ -75,6 +77,9 @@ builder.Services.AddAuthorization(options =>
 
 builder.Services.AddSingleton<IEmailSender<ApplicationUser>, IdentityNoOpEmailSender>();
 builder.Services.AddSingleton<Hasher>();
+builder.Services.AddSingleton<AsymmetricEncryptionHandler>();
+builder.Services.AddSingleton<SymmetricEncryptionHandler>();
+builder.Services.AddSingleton<KeyManager>();
 
 if (!IsLinux())
 {

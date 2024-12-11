@@ -1,5 +1,7 @@
 ﻿@page "/weather"
+@using Microsoft.AspNetCore.Authorization
 
+@attribute [Authorize("RequireAuthenticatedUser")]
 <PageTitle>Weather</PageTitle>
 
 <h1>Weather</h1>

@@ -1,4 +1,4 @@
-namespace BlazorSecurity.Hashing;
+namespace BlazorSecurity.Encryption;
 
 using System;
 using System.Security.Cryptography;
@@ -44,12 +44,12 @@ public class Hasher
     }
     
     // 4. BCRYPT
-    public static T ComputeBCrypt<T>(T input)
+    public static dynamic ComputeBCrypt(dynamic input)
     {
         var inputString = ConvertToString(input);
         var hashString = BCrypt.Net.BCrypt.EnhancedHashPassword(inputString);
         
-        return ConvertFromString<T>(hashString);
+        return ConvertFromString(hashString, input.GetType());
     }
 
     public static bool VerifyBCrypt<T>(T input, string hash)
@@ -105,6 +105,21 @@ public class Hasher
         if (typeof(T) == typeof(byte[]))
         {
             return (T)(object)Convert.FromBase64String(input);
+        }
+
+        throw new ArgumentException("Output type must be string or byte[]");
+    }
+    
+    private static dynamic ConvertFromString(string input, Type targetType)
+    {
+        if (targetType == typeof(string))
+        {
+            return input;
+        }
+
+        if (targetType == typeof(byte[]))
+        {
+            return Convert.FromBase64String(input);
         }
 
         throw new ArgumentException("Output type must be string or byte[]");

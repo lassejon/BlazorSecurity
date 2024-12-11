@@ -1,10 +1,15 @@
 @page "/todo"
 @using BlazorSecurity.Data
+@using BlazorSecurity.Encryption
+@using BlazorSecurity.Models
+@using Microsoft.AspNetCore.Authorization
 @using Microsoft.EntityFrameworkCore
 
 @inject CprDbContext DbContext
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject AsymmetricEncryptionHandler EncryptionHandler
 
+@attribute [Authorize("RequireAuthenticatedUser")]
 <h3>Todo List</h3>
 
 <div class="mb-3">
@@ -17,7 +22,7 @@
     <ul class="list-group">
         @foreach (var item in ToDoList)
         {
-            <li class="list-group-item">@item.ToDoItem</li>
+            <li class="list-group-item">@item.Item</li>
         }
     </ul>
 }
@@ -28,7 +33,7 @@ else
 
 @code {
     private string NewToDoItem = string.Empty;
-    private List<BlazorSecurity.Data.ToDo> ToDoList = new();
+    private List<ToDoDecrypted> ToDoList = new();
 
     private async Task AddToDo()
     {
@@ -45,7 +50,7 @@ else
         var newToDo = new BlazorSecurity.Data.ToDo
         {
             UserId = userId,
-            ToDoItem = NewToDoItem
+            ToDoItem = EncryptionHandler.Encrypt(NewToDoItem)
         };
 
         DbContext.ToDos.Add(newToDo);
@@ -67,6 +72,7 @@ else
         {
             ToDoList = await DbContext.ToDos
                 .Where(t => t.UserId == userId)
+                .Select(t => new ToDoDecrypted() { Item = EncryptionHandler.Decrypt(t.ToDoItem)})
                 .ToListAsync();
         }
     }
